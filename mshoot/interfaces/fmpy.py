@@ -18,7 +18,7 @@ def df_to_struct_arr_new(df):
     # time index must be reset to pass it to the struct_arr
     df = df.reset_index()
     struct_arr =  df.to_records(index=False)
-    s = df.dtypes
+    #s = df.dtypes
     return struct_arr
 
 def struct_arr_to_df(arr):
