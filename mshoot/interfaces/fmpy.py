@@ -13,6 +13,21 @@ from fmpy import simulate_fmu, read_model_description, instantiate_fmu, extract,
 
 from mshoot import SimModel
 
+def df_to_struct_arr_new(df):
+    """Converts a DataFrame to structured array."""
+    # time index must be reset to pass it to the struct_arr
+    df = df.reset_index()
+    struct_arr =  df.to_records(index=False)
+    s = df.dtypes
+    return struct_arr
+
+def struct_arr_to_df(arr):
+    """Converts a structured array to DataFrame."""
+    df = pd.DataFrame(arr).set_index('time')
+
+    return df
+
+
 class SimFMU(SimModel):
 
     def __init__(self, fmupath, outputs=None, states=None, parameters=None,
@@ -142,17 +157,10 @@ class SimFMU(SimModel):
             if name != 'time':
                 start_values[name] = value
 
-            # Initial states from previous FMU simulation
-        for n, value in self.x0.items():
-            for n in self.states:
-                print (n, value)
-                start_values[n] = value
-
-            # Initial states overriden by the user
+        # Initial states overriden by the user
         i = 0
         for n in self.states:
             start_values[n] = x0[i]
-            print(n, x0[i])
             i += 1
 
         # Simulate
@@ -161,9 +169,11 @@ class SimFMU(SimModel):
             sys.stdout = nullf
 
         self.output_names = list(self.outputs)
-        derivative_names = [der.variable.name for der in self.model_description.derivatives]
+        #derivative_names = [der.variable.name for der in self.model_description.derivatives]
         # names = [re.search(r'der\((.*)\)', n).group(1) for n in derivative_names]
-        for name in derivative_names:
+        #for name in derivative_names:
+            #self.output_names.append(name)
+        for name in self.states:
             self.output_names.append(name)
 
         res = simulate_fmu(
@@ -190,22 +200,18 @@ class SimFMU(SimModel):
 
         # Outputs
         res_df = struct_arr_to_df(res)
-        t = res['time']
-
-        ydf = pd.DataFrame(index=pd.Index(t, name='time'))
-        xdf = pd.DataFrame(index=pd.Index(t, name='time'))
+        ydf = pd.DataFrame()
+        xdf = pd.DataFrame()
 
         for n in self.outputs:
-            ydf[n] = res[n]
+            ydf[n] = res_df[n]
 
-   
         for n in self.states:
-            xdf[n] = x0[i]
+            xdf[n] = res_df[n]
 
         self.fmu.reset()
 
         return ydf, xdf
-        
         
 if __name__ == "__main__":
     # DEMO: SIMULATE
